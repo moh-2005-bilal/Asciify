@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111111">
+<title>ASCIIFY — Image to ASCII Art & Compressor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  /* ==========================================================================
+     CSS Variables & Theming
+     ========================================================================== */
+  :root {
+    --stage: #111111;
+    --stage-raised: #1a1a1a;
+    --stage-well: #0a0a0a;
+    --line: #333333;
+    --line-soft: #222222;
+    --ink: #dddddd;
+    --ink-dim: #999999;
+    --paper: #f5f5f5;
+    --paper-shadow: #aaaaaa;
+    --paper-ink: #111111;
+    --accent: #aaaaaa;
+    --font-ui: 'Poppins', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body.light-theme {
+    --stage: #f5f5f5;
+    --stage-raised: #ffffff;
+    --stage-well: #e0e0e0;
+    --line: #cccccc;
+    --line-soft: #dddddd;
+    --ink: #111111;
+    --ink-dim: #666666;
+    --paper: #ffffff;
+    --paper-shadow: #999999;
+    --paper-ink: #111111;
+    --accent: #666666;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--stage);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* ==========================================================================
+     Custom Scrollbars
+     ========================================================================== */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--stage-well);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-dim);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) var(--stage-well);
+  }
+
+  /* ==========================================================================
+     Header
+     ========================================================================== */
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .header-left {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--ink-dim);
+  }
+
+  /* ASCII title art - responsive scaling */
+  #titleArt {
+    font-family: var(--font-mono);
+    font-size: 6px;
+    line-height: 6px;
+    color: var(--ink);
+    white-space: pre;
+    overflow: hidden;
+    margin: 0;
+    opacity: 0.9;
+  }
+  @media (max-width: 600px) {
+    #titleArt {
+      font-size: 4px;
+      line-height: 4px;
+    }
+  }
+
+  .tagline {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+
+  .tagline em {
+    color: var(--accent);
+  }
+
+  .sub {
+    font-size: 13px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #themeToggle {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #themeToggle:hover {
+    border-color: var(--accent);
+    background: var(--stage-raised);
+  }
+
+  /* ==========================================================================
+     Buttons
+     ========================================================================== */
+  .btn {
+    font-family: var(--font-ui);
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    padding: 10px 16px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .btn:hover {
+    background: rgba(0,0,0,0.05);
+    border-color: var(--accent);
+  }
+  .btn.small { padding: 8px 12px; font-size: 12px; }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ==========================================================================
+     Tabs
+     ========================================================================== */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-btn {
+    font-family: var(--font-ui);
+    background: transparent;
+    color: var(--ink-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ==========================================================================
+     Tool Sections
+     ========================================================================== */
+  .tool-section { display: none; }
+  .tool-section.active { display: block; }
+
+  /* ==========================================================================
+     ASCII Tool Layout
+     ========================================================================== */
+  .ascii-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .ascii-layout { grid-template-columns: 1fr; }
+  }
+
+  /* Control Panel */
+  .control-panel {
+    background: var(--stage-raised);
+    border: 1px solid var(--line);
+    padding: 16px;
+  }
+
+  .control-group { margin-bottom: 14px; }
+  .control-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+    display: block;
+    font-weight: 500;
+  }
+
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .mode-btn {
+    font-family: var(--font-ui);
+    background: transparent;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    padding: 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mode-btn:hover { color: var(--ink); border-color: var(--ink-dim); }
+  .mode-btn.active {
+    background: var(--accent);
+    color: var(--stage);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--line);
+    outline: none;
+    margin: 10px 0;
+    touch-action: manipulation;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--accent);
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .range-val {
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+    font-size: 12px;
+  }
+
+  .switch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .switch {
+    width: 40px;
+    height: 22px;
+    border: 1px solid var(--line);
+    position: relative;
+    background: var(--stage-well);
+    transition: border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--ink-dim);
+    transition: left 0.2s ease, background 0.2s ease;
+  }
+  .switch.on { border-color: var(--accent); }
+  .switch.on::after { left: 20px; background: var(--accent); }
+
+  .file-drop {
+    border: 1px dashed var(--line);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--stage-well);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .file-drop.drag {
+    border-color: var(--accent);
+    background: rgba(0,0,0,0.03);
+  }
+  .file-drop .dz-label { font-size: 13px; }
+  .file-drop .dz-sub { font-size: 11px; color: var(--ink-dim); margin-top: 4px; }
+
+  #asciiPreviewThumb {
+    max-width: 100%;
+    max-height: 180px;
+    margin-top: 10px;
+    display: none;
+    border: 1px solid var(--line);
+  }
+
+  .hidden { display: none; }
+
+  /* Output Area */
+  .output-area {
+    background: var(--stage-raised);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+  }
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .output-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .paper-strip {
+    position: relative;
+    background: var(--paper);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 2px 0 var(--paper-shadow);
+    transform: rotate(-0.3deg);
+    padding: 24px 18px;
+    margin: 14px;
+    flex: 1;
+  }
+  .paper-strip::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: radial-gradient(circle at 8px 0, transparent 4px, var(--paper) 4.5px) 0 -4px / 16px 8px repeat-x;
+  }
+
+  #outputPanel {
+    overflow: auto;
+    max-height: 50vh;
+    -webkit-overflow-scrolling: touch;
+  }
+  #asciiOut {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 6px;
+    line-height: 6px;
+    white-space: pre;
+    color: var(--paper-ink);
+  }
+
+  /* ==========================================================================
+     Compressor Tool Layout
+     ========================================================================== */
+  .compressor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .compressor-layout { grid-template-columns: 1fr; }
+  }
+
+  .compressor-panel {
+    background: var(--stage-raised);
+    border: 1px solid var(--line);
+    padding: 16px;
+  }
+
+  .preview-box {
+    border: 1px solid var(--line);
+    background: var(--stage-well);
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .preview-box img {
+    max-width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+  }
+
+  .file-size {
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .size-highlight { color: var(--accent); }
+
+  /* ==========================================================================
+     Footer
+     ========================================================================== */
+  footer {
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .footer-left {
+    max-width: 500px;
+    line-height: 1.6;
+  }
+  .footer-right a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    font-size: 12px;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .footer-right a:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .footer-right i {
+    font-size: 16px;
+  }
+
+  /* ==========================================================================
+     Loading Spinner
+     ========================================================================== */
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+    margin-left: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- ============================ HEADER ============================ -->
+    <header>
+      <div class="header-left">
+        <div class="eyebrow">Image → Text Converter & Compressor</div>
+        <pre id="titleArt"></pre>
+        <p class="tagline">Every photo is a grid of numbers. <em>Read them, print them, compress them.</em></p>
+        <p class="sub">All processing happens locally in your browser. Nothing is uploaded.</p>
+      </div>
+      <div class="header-right">
+        <button id="themeToggle" title="Toggle theme">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================ TABS ============================ -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="ascii">ASCII Art Generator</button>
+      <button class="tab-btn" data-tab="compressor">Image Compressor</button>
+    </nav>
+
+    <!-- ==================== ASCII TOOL SECTION ==================== -->
+    <section id="asciiTool" class="tool-section active">
+      <div class="ascii-layout">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-group">
+            <span class="control-label">Source Image</span>
+            <div class="file-drop" id="dropZone">
+              <div class="dz-label">Drop image here or <b>click to select</b></div>
+              <div class="dz-sub">JPG · PNG · WEBP</div>
+              <input type="file" id="fileInput" accept="image/*" class="hidden">
+            </div>
+            <img id="asciiPreviewThumb" alt="preview">
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Mode</span>
+            <div class="mode-grid">
+              <button class="mode-btn active" data-mode="ascii">Shaded</button>
+              <button class="mode-btn" data-mode="binary">Binary</button>
+              <button class="mode-btn" data-mode="color">Color</button>
+              <button class="mode-btn" data-mode="blocks">Blocks</button>
+              <button class="mode-btn" data-mode="edges">Edges</button>
+              <button class="mode-btn" data-mode="matrix">Matrix</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Resolution (Columns)</span>
+            <div class="range-row">
+              <input type="range" id="widthRange" min="40" max="220" value="100" step="5">
+              <span class="range-val" id="widthVal">100</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Aspect Ratio</span>
+            <div class="range-row">
+              <input type="range" id="aspectRange" min="0.3" max="0.8" value="0.5" step="0.01">
+              <span class="range-val" id="aspectVal">0.50</span>
+            </div>
+          </div>
+
+          <div class="control-group" id="thresholdGroup" style="display:none;">
+            <span class="control-label">Threshold (Binary)</span>
+            <div class="range-row">
+              <input type="range" id="thresholdRange" min="0" max="255" value="128" step="1">
+              <span class="range-val" id="thresholdVal">128</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Brightness</span>
+            <div class="range-row">
+              <input type="range" id="brightnessRange" min="-100" max="100" value="0" step="1">
+              <span class="range-val" id="brightnessVal">0</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Contrast</span>
+            <div class="range-row">
+              <input type="range" id="contrastRange" min="-100" max="100" value="0" step="1">
+              <span class="range-val" id="contrastVal">0</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="switch-row" id="invertSwitchRow">
+              <div class="switch" id="invertSwitch"></div>
+              <span>Invert Brightness</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <button class="btn" id="convertBtn">Regenerate ASCII</button>
+            <span class="spinner" id="convertSpinner"></span>
+          </div>
+        </div>
+
+        <!-- Output Area -->
+        <div class="output-area">
+          <div class="output-header">
+            <span id="outputMeta">No image loaded</span>
+            <div class="output-actions">
+              <button class="btn small" id="copyTextBtn">Copy Text</button>
+              <button class="btn small" id="copyHtmlBtn">Copy HTML</button>
+              <button class="btn small" id="downloadTxtBtn">Download .txt</button>
+              <button class="btn small" id="downloadPngBtn">Download .png</button>
+            </div>
+          </div>
+          <div class="paper-strip">
+            <div id="outputPanel"><pre id="asciiOut"></pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== COMPRESSOR TOOL SECTION ==================== -->
+    <section id="compressorTool" class="tool-section">
+      <div class="compressor-layout">
+        <!-- Upload / Original -->
+        <div class="compressor-panel">
+          <h3 style="margin-top:0; font-size:16px;">Upload Image</h3>
+          <div class="file-drop" id="compressorDropZone">
+            <div class="dz-label">Drop image here or <b>click to select</b></div>
+            <div class="dz-sub">JPG · PNG · WEBP</div>
+            <input type="file" id="compressorFileInput" accept="image/*" class="hidden">
+          </div>
+          <div class="preview-box" id="originalPreviewBox">
+            <img id="originalPreview" alt="Original preview" style="display:none;">
+            <span style="color:var(--ink-dim);" id="originalPlaceholder">No image selected</span>
+          </div>
+          <div class="file-size" id="originalSize"></div>
+        </div>
+
+        <!-- Settings / Compressed -->
+        <div class="compressor-panel">
+          <h3 style="margin-top:0; font-size:16px;">Compression Settings</h3>
+          <div class="control-group">
+            <span class="control-label">Quality</span>
+            <div class="range-row">
+              <input type="range" id="qualityRange" min="10" max="100" value="80" step="1">
+              <span class="range-val" id="qualityVal">80%</span>
+            </div>
+          </div>
+          <div class="control-group">
+            <span class="control-label">Output Format</span>
+            <div class="mode-grid">
+              <button class="mode-btn active" data-format="image/jpeg">JPEG</button>
+              <button class="mode-btn" data-format="image/png">PNG</button>
+              <button class="mode-btn" data-format="image/webp">WebP</button>
+            </div>
+          </div>
+          <button class="btn" id="compressBtn" disabled>Compress Image</button>
+          <span class="spinner" id="compressSpinner"></span>
+
+          <div style="margin-top:20px;">
+            <div class="preview-box" id="compressedPreviewBox">
+              <img id="compressedPreview" alt="Compressed preview" style="display:none;">
+              <span style="color:var(--ink-dim);" id="compressedPlaceholder">Compressed image will appear here</span>
+            </div>
+            <div class="file-size" id="compressedSize"></div>
+            <div style="margin-top:10px;">
+              <button class="btn small" id="downloadCompressedBtn" disabled>Download Compressed</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ FOOTER ============================ -->
+    <footer>
+      <div class="footer-left">
+        Built with plain HTML/CSS/JS — no frameworks, no uploads, no tracking.
+      </div>
+      <div class="footer-right">
+        <a href="https://github.com/moh-2005-bilal" target="_blank" rel="noopener noreferrer">
+          <i class="fab fa-github"></i> GitHub
+        </a>
+      </div>
+    </footer>
+  </div>
+
+<script>
+  // ==================== UTILITIES ====================
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function showSpinner(el) { el.style.display = 'inline-block'; }
+  function hideSpinner(el) { el.style.display = 'none'; }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        return true;
+      } catch (e) {
+        return false;
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+  }
+
+  // ==================== TITLE ART ====================
+
+  function renderTitleArt() {
+    const text = "ASCIIFY";
+    const cw = 700, ch = 100;
+    const canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 90px monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, 8, 2);
+
+    const data = ctx.getImageData(0, 0, cw, ch).data;
+    const chars = " .:-=+*#%@";
+    const colStep = 4, rowStep = 8;
+    let out = '';
+    for (let y = 0; y < ch; y += rowStep) {
+      let line = '';
+      for (let x = 0; x < cw; x += colStep) {
+        const i = (y * cw + x) * 4;
+        const b = data[i];
+        line += chars[Math.floor((b / 255) * (chars.length - 1))];
+      }
+      out += line + '\n';
+    }
+    document.getElementById('titleArt').textContent = out;
+  }
+
+  // ==================== THEME TOGGLE ====================
+
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = themeToggle.querySelector('i');
+
+  function setTheme(theme) {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+      themeIcon.className = 'fas fa-sun';
+    } else {
+      document.body.classList.remove('light-theme');
+      themeIcon.className = 'fas fa-moon';
+    }
+    localStorage.setItem('theme', theme);
+  }
+
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    setTheme('light');
+  } else if (savedTheme === 'dark') {
+    setTheme('dark');
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    setTheme('light');
+  } else {
+    setTheme('dark');
+  }
+
+  themeToggle.addEventListener('click', () => {
+    if (document.body.classList.contains('light-theme')) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+  });
+
+  // ==================== TAB SWITCHING ====================
+
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const toolSections = {
+    ascii: document.getElementById('asciiTool'),
+    compressor: document.getElementById('compressorTool')
+  };
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.values(toolSections).forEach(s => s.classList.remove('active'));
+      toolSections[btn.dataset.tab].classList.add('active');
+    });
+  });
+
+  // ==================== ASCII TOOL ====================
+
+  const CHARSETS = {
+    ascii: "@%#*+=-:. ",
+    blocks: "█▓▒░ ",
+    edges: " .:-=+*#%@",
+    matrix: "01"
+  };
+
+  let asciiImage = null;
+  let currentMode = 'ascii';
+  let invert = false;
+  let brightness = 0;
+  let contrast = 0;
+  let aspectRatio = 0.5;
+  let threshold = 128;
+  let outputText = '';
+  let outputHtml = '';
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const previewThumb = document.getElementById('asciiPreviewThumb');
+  const widthRange = document.getElementById('widthRange');
+  const widthVal = document.getElementById('widthVal');
+  const aspectRange = document.getElementById('aspectRange');
+  const aspectVal = document.getElementById('aspectVal');
+  const brightnessRange = document.getElementById('brightnessRange');
+  const brightnessVal = document.getElementById('brightnessVal');
+  const contrastRange = document.getElementById('contrastRange');
+  const contrastVal = document.getElementById('contrastVal');
+  const thresholdRange = document.getElementById('thresholdRange');
+  const thresholdVal = document.getElementById('thresholdVal');
+  const invertSwitch = document.getElementById('invertSwitch');
+  const invertSwitchRow = document.getElementById('invertSwitchRow');
+  const modeGrid = document.querySelector('.mode-grid');
+  const convertBtn = document.getElementById('convertBtn');
+  const convertSpinner = document.getElementById('convertSpinner');
+  const asciiOut = document.getElementById('asciiOut');
+  const outputMeta = document.getElementById('outputMeta');
+  const copyTextBtn = document.getElementById('copyTextBtn');
+  const copyHtmlBtn = document.getElementById('copyHtmlBtn');
+  const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+  const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadAsciiImage(e.target.files[0]);
+  });
+
+  ['dragenter', 'dragover'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadAsciiImage(file);
+  });
+
+  function loadAsciiImage(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        asciiImage = img;
+        previewThumb.src = e.target.result;
+        previewThumb.style.display = 'block';
+        convertAscii();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  modeGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.mode-btn[data-mode]');
+    if (!btn) return;
+    modeGrid.querySelectorAll('.mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    document.getElementById('thresholdGroup').style.display = currentMode === 'binary' ? 'block' : 'none';
+    convertAscii();
+  });
+
+  widthRange.addEventListener('input', () => {
+    widthVal.textContent = widthRange.value;
+    debouncedConvert();
+  });
+  aspectRange.addEventListener('input', () => {
+    aspectVal.textContent = parseFloat(aspectRange.value).toFixed(2);
+    aspectRatio = parseFloat(aspectRange.value);
+    debouncedConvert();
+  });
+  brightnessRange.addEventListener('input', () => {
+    brightnessVal.textContent = brightnessRange.value;
+    brightness = parseInt(brightnessRange.value);
+    debouncedConvert();
+  });
+  contrastRange.addEventListener('input', () => {
+    contrastVal.textContent = contrastRange.value;
+    contrast = parseInt(contrastRange.value);
+    debouncedConvert();
+  });
+  thresholdRange.addEventListener('input', () => {
+    thresholdVal.textContent = thresholdRange.value;
+    threshold = parseInt(thresholdRange.value);
+    debouncedConvert();
+  });
+  invertSwitchRow.addEventListener('click', () => {
+    invert = !invert;
+    invertSwitch.classList.toggle('on', invert);
+    debouncedConvert();
+  });
+  convertBtn.addEventListener('click', convertAscii);
+
+  let debounceTimer;
+  function debouncedConvert() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(convertAscii, 250);
+  }
+
+  function convertAscii() {
+    if (!asciiImage) return;
+    showSpinner(convertSpinner);
+
+    setTimeout(() => {
+      try {
+        const width = parseInt(widthRange.value);
+        const aspect = aspectRatio;
+        const height = Math.max(1, Math.round(width * asciiImage.height / asciiImage.width * aspect));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(asciiImage, 0, 0, width, height);
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+
+        const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        const brightnessOffset = brightness;
+
+        let plain = '';
+        let html = '';
+        const charset = CHARSETS[currentMode] || CHARSETS.ascii;
+
+        let edgeData = null;
+        if (currentMode === 'edges') {
+          edgeData = new Float32Array(width * height);
+          const gray = new Float32Array(width * height);
+          for (let i = 0; i < width * height; i++) {
+            const r = data[i*4], g = data[i*4+1], b = data[i*4+2];
+            gray[i] = 0.299*r + 0.587*g + 0.114*b;
+          }
+          for (let y = 1; y < height-1; y++) {
+            for (let x = 1; x < width-1; x++) {
+              const idx = y * width + x;
+              const gx = -gray[idx-width-1] - 2*gray[idx-1] - gray[idx+width-1]
+                        + gray[idx-width+1] + 2*gray[idx+1] + gray[idx+width+1];
+              const gy = -gray[idx-width-1] - 2*gray[idx-width] - gray[idx-width+1]
+                        + gray[idx+width-1] + 2*gray[idx+width] + gray[idx+width+1];
+              edgeData[idx] = Math.sqrt(gx*gx + gy*gy);
+            }
+          }
+        }
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            let r = data[i], g = data[i+1], b = data[i+2];
+
+            if (currentMode === 'edges' && edgeData) {
+              const edge = edgeData[y * width + x];
+              const ch = charset[Math.floor((edge / 255) * (charset.length - 1))];
+              plain += ch;
+              html += ch;
+              continue;
+            }
+
+            r = Math.min(255, Math.max(0, contrastFactor * (r - 128) + 128 + brightnessOffset));
+            g = Math.min(255, Math.max(0, contrastFactor * (g - 128) + 128 + brightnessOffset));
+            b = Math.min(255, Math.max(0, contrastFactor * (b - 128) + 128 + brightnessOffset));
+
+            let brightnessVal = 0.299 * r + 0.587 * g + 0.114 * b;
+            if (invert) brightnessVal = 255 - brightnessVal;
+
+            if (currentMode === 'binary') {
+              const ch = brightnessVal < threshold ? '1' : '0';
+              plain += ch;
+              html += ch;
+            } else if (currentMode === 'color') {
+              const ch = charset[Math.floor((brightnessVal / 255) * (charset.length - 1))];
+              plain += ch;
+              html += `<span style="color:rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})">${ch === ' ' ? '&nbsp;' : ch}</span>`;
+            } else if (currentMode === 'matrix') {
+              const ch = brightnessVal > 128 ? '0' : '1';
+              plain += ch;
+              html += `<span style="color:#00ff41">${ch}</span>`;
+            } else {
+              const ch = charset[Math.floor((brightnessVal / 255) * (charset.length - 1))];
+              plain += ch;
+              html += ch;
+            }
+          }
+          plain += '\n';
+          html += '\n';
+        }
+
+        outputText = plain;
+        outputHtml = html;
+        asciiOut.innerHTML = (currentMode === 'color' || currentMode === 'matrix') ? html : escapeHtml(plain);
+        outputMeta.textContent = `${width} × ${height} chars — ${currentMode} mode`;
+        enableOutputButtons(true);
+      } catch (err) {
+        console.error(err);
+        alert('Conversion failed. Please try a smaller image or lower resolution.');
+      } finally {
+        hideSpinner(convertSpinner);
+      }
+    }, 10);
+  }
+
+  function enableOutputButtons(enabled) {
+    [copyTextBtn, copyHtmlBtn, downloadTxtBtn, downloadPngBtn].forEach(btn => btn.disabled = !enabled);
+  }
+
+  copyTextBtn.addEventListener('click', async () => {
+    const success = await copyToClipboard(outputText);
+    if (success) flashBtn(copyTextBtn, 'Copied!');
+    else alert('Copy failed');
+  });
+
+  copyHtmlBtn.addEventListener('click', async () => {
+    const success = await copyToClipboard(outputHtml);
+    if (success) flashBtn(copyHtmlBtn, 'Copied!');
+    else alert('Copy failed');
+  });
+
+  downloadTxtBtn.addEventListener('click', () => {
+    const blob = new Blob([outputText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ascii-art.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  downloadPngBtn.addEventListener('click', () => {
+    const fontSize = 6;
+    const lineHeight = 6;
+    const padding = 20;
+    const lines = outputText.split('\n');
+    const textWidth = Math.max(...lines.map(line => line.length)) * fontSize;
+    const textHeight = lines.length * lineHeight;
+    const canvas = document.createElement('canvas');
+    canvas.width = textWidth + padding * 2;
+    canvas.height = textHeight + padding * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#111111';
+    ctx.font = `${fontSize}px monospace`;
+    ctx.textBaseline = 'top';
+    lines.forEach((line, i) => {
+      ctx.fillText(line, padding, padding + i * lineHeight);
+    });
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ascii-art.png';
+    a.click();
+  });
+
+  function flashBtn(btn, msg) {
+    const original = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => btn.textContent = original, 1200);
+  }
+
+  // ==================== COMPRESSOR TOOL ====================
+
+  let compressorImage = null;
+  let compressedDataUrl = null;
+  let selectedFormat = 'image/jpeg';
+
+  const compressorDropZone = document.getElementById('compressorDropZone');
+  const compressorFileInput = document.getElementById('compressorFileInput');
+  const originalPreview = document.getElementById('originalPreview');
+  const originalPlaceholder = document.getElementById('originalPlaceholder');
+  const originalSize = document.getElementById('originalSize');
+  const qualityRange = document.getElementById('qualityRange');
+  const qualityVal = document.getElementById('qualityVal');
+  const formatButtons = document.querySelectorAll('.mode-btn[data-format]');
+  const compressBtn = document.getElementById('compressBtn');
+  const compressSpinner = document.getElementById('compressSpinner');
+  const compressedPreview = document.getElementById('compressedPreview');
+  const compressedPlaceholder = document.getElementById('compressedPlaceholder');
+  const compressedSize = document.getElementById('compressedSize');
+  const downloadCompressedBtn = document.getElementById('downloadCompressedBtn');
+
+  compressorDropZone.addEventListener('click', () => compressorFileInput.click());
+  compressorFileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadCompressorImage(e.target.files[0]);
+  });
+
+  ['dragenter', 'dragover'].forEach(evt =>
+    compressorDropZone.addEventListener(evt, e => { e.preventDefault(); compressorDropZone.classList.add('drag'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    compressorDropZone.addEventListener(evt, e => { e.preventDefault(); compressorDropZone.classList.remove('drag'); })
+  );
+  compressorDropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadCompressorImage(file);
+  });
+
+  function loadCompressorImage(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        compressorImage = img;
+        originalPreview.src = e.target.result;
+        originalPreview.style.display = 'block';
+        originalPlaceholder.style.display = 'none';
+        originalSize.textContent = `Original: ${formatBytes(file.size)}`;
+        compressBtn.disabled = false;
+        compressedPreview.style.display = 'none';
+        compressedPlaceholder.style.display = 'block';
+        compressedSize.textContent = '';
+        downloadCompressedBtn.disabled = true;
+        compressedDataUrl = null;
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  qualityRange.addEventListener('input', () => {
+    qualityVal.textContent = qualityRange.value + '%';
+  });
+
+  formatButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      formatButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFormat = btn.dataset.format;
+      if (compressorImage && compressedDataUrl) {
+        compressImage();
+      }
+    });
+  });
+
+  compressBtn.addEventListener('click', compressImage);
+
+  function compressImage() {
+    if (!compressorImage) return;
+    showSpinner(compressSpinner);
+    setTimeout(() => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = compressorImage.width;
+        canvas.height = compressorImage.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(compressorImage, 0, 0);
+        const quality = parseInt(qualityRange.value) / 100;
+        const mimeType = selectedFormat;
+        compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        
+        compressedPreview.src = compressedDataUrl;
+        compressedPreview.style.display = 'block';
+        compressedPlaceholder.style.display = 'none';
+        
+        const base64Length = compressedDataUrl.length - (compressedDataUrl.indexOf(',') + 1);
+        const compressedBytes = Math.floor(base64Length * 3 / 4);
+        compressedSize.textContent = `Compressed: ${formatBytes(compressedBytes)}`;
+        downloadCompressedBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        alert('Compression failed. Please try a different format or image.');
+      } finally {
+        hideSpinner(compressSpinner);
+      }
+    }, 10);
+  }
+
+  downloadCompressedBtn.addEventListener('click', () => {
+    if (!compressedDataUrl) return;
+    const a = document.createElement('a');
+    a.href = compressedDataUrl;
+    const extension = selectedFormat.split('/')[1];
+    a.download = 'compressed-image.' + extension;
+    a.click();
+  });
+
+  // ==================== INITIALIZATION ====================
+  renderTitleArt();
+  enableOutputButtons(false);
+</script>
+</body>
+</html>
