@@ -76,10 +76,6 @@ Works in all modern browsers that support Canvas, FileReader, and Clipboard API:
 - Safari (latest)
 - Mobile browsers (iOS Safari, Android Chrome)
 
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
 ## 👤 Author
 
 **Mohammad Bilal**  
